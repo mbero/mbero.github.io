@@ -4,6 +4,9 @@ title: About
 permalink: /about/
 ---
 
-I'm Programmer for Python & Django. I've made quite a few web apps, especially on Django. Now, I am doing more on backend.
+I'm software engineer with experience in both areas in web aplication development: frontend and backend.
+Interested in modern programming techniques and IT in general.
 
-email: agus[at]python.web.id
+BJJ and Strength training enthusiast.
+
+email: mberendt546[at]gmail.com
