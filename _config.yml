@@ -1,9 +1,9 @@
 title: 
-description: My notes from backend and fronted development 
+description:Collection of notes connected with software engineering
 author: MB
 github: https://github.com/mbero
 about: Software engineering notes
-google_analytics: UA-XXXXXXXX-Y
+google_analytics: UA-154125713-1
 
 enableTags: true
 tagarray: []
@@ -24,8 +24,8 @@ social:
 urls:
     - text: About Me
       url: /about/
-    - text: My Projects
-      url: /projects/
+    #- text: My Projects
+     # url: /projects/
     - text: XML Feed
       url: /feed.xml
 
