@@ -1,10 +1,11 @@
+
 ---
 layout: post
 title:  "Three types of JUnit tests in Spring Boot"
 date:   2019-12-21 16:00:00 +0700
 categories: [java, spring, junit]
 ---
-You are able to test your Spring web applications in few different ways with JUnit only. Here are three examples:
+You are able to test your Spring web applications in few different ways with JUnit only. You can perform for example:
 
 # 1.Isolation unit tests with Mockito
 
@@ -15,48 +16,53 @@ You are able to test your Spring web applications in few different ways with JUn
 Here we put short summary of how these tests works based on some example application from [https://github.com/mbero/budget_app](https://github.com/mbero/budget_app) repository.
 
 
-I
 # 1.Isolation unit tests with Mockito
 
-With these kind of tests, we are prepared Mocks of the dependencies in our tested service, and by using static methods like *Mockito.when* we configure behaviour of our Mocks.
+With these kind of tests, we are prepared Mocks of the dependencies in our tested service.By using static methods like `org.mockito.Mockito.when()`  we configure behaviour of our Mocks.
 Lets look on example:
 
     @SpringBootTest(webEnvironment = WebEnvironment.NONE)
     public class ExpensesServiceImplTest {
-    
-    @InjectMocks
-    private ExpensesServiceImpl expenseService;
-    
-    @Mock
-    private ExpenseRepository expenseRepository;
-    @Mock
-    private TagsService tagService;
-    @Mock
-    private CommonTools tools;
-    
-    private TestUtils integrationTestUtil;
-    private Expense testExpense;
-    private List<Expense> expenses;
-    
-    @BeforeEach
-    
-    public void setUp() {
-    integrationTestUtil = new TestUtils();
-    expenses = integrationTestUtil.generateGivenAmounOfTestExpenseObjects(1, 1, Timestamp.valueOf("2018-11-12 01:00:00.123456789"));
-    
-    Mockito.when(expenseRepository.findAll()).thenReturn(expenses)
-      
-    }
+	    
+	    @InjectMocks
+	    private ExpensesServiceImpl expenseService;
+	    
+	    @Mock
+	    private ExpenseRepository expenseRepository;
+	    @Mock
+	    private TagsService tagService;
+	    @Mock
+	    private CommonTools tools;
+	    
+	    private TestUtils integrationTestUtil;
+	    private List<Expense> expenses;
+	    
+	    @BeforeEach
+	    public void setUp() {
+		    integrationTestUtil = new TestUtils();
+		    expenses = integrationTestUtil.generateGivenAmounOfTestExpenseObjects(1, 1, Timestamp.valueOf("2018-11-12 01:00:00.123456789"));
+		    Mockito.when(expenseRepository.findAll()).thenReturn(expenses)
+		      
+	    }
+	    
+		@Test
+		public void testGetAllExpenses() {
+			Optional<List<Expense>> allExpenses = expenseService.getAllExpenses();
+			assertTrue(allExpenses.get().size() > 0);
+		}
 
 
 `@Mock` - this annotation tells the compiler, that annotated service will be mocked in further code inside JUnit test
 
 `@InjectMocks` - this annotation is responsible for telling the compiler which service will be feeded with configured Mocks
 
-`Mockito.when` - this methods configures behaviour of Mocked service. In simple words: we use when -> then construction to tell what should be returned for given method of Mocked service, when the configured method will be called.
+`@Before`  or `@BeforeEach` (in Junit5) - this annotation is used for method which will be invoked before every unit test (@Test annotated method)  in given file. For example: if we will have **five** instances of @Test annotated methods, method annotated with `@Before` will be invoked **five** times. We are using this to prepare proper objects before test will be invoked. It's very important to remember - order or JUnit test invocation is **not deterministic** - its not related to order of @Test methods in our file.
+
+
+`Mockito.when` - this methods configures behavior of Mocked service. We are using `when -> then` construction to tell what should be returned for given method of Mocked service, when the configured method will be called.
 In this example - 
-`ExpensesServiceImpl` has autowired `ExpenseRepository` as an internal dependency. To be able to unit test only ExpensesServiceImpl behaviour, we have to be sure that ExpenseRepository will be returned appropiate values when its necessary.
-That why in line:
+`ExpensesServiceImpl` has autowired `ExpenseRepository` as an internal dependency. To be able to unit test only `ExpensesServiceImpl` behavior, we have to be sure that ExpenseRepository will return appropiate values when its necessary.
+That's why in line:
 
      expenses = integrationTestUtil.generateGivenAmounOfTestExpenseObjects(1, 1, Timestamp.valueOf("2018-11-12 01:00:00.123456789"));
     
@@ -64,3 +70,19 @@ we are generating some list of test values, which be returned by `expenseReposit
 We are doing it exactly by this line:
 
      Mockito.when(expenseRepository.findAll()).thenReturn(expenses)
+
+Finally, in given @Test case: 
+
+    @Test
+    	public void testGetAllExpenses() {
+    		Optional<List<Expense>> allExpenses = expenseService.getAllExpenses();
+    		assertTrue(allExpenses.get().size() > 0);
+    	}
+
+we are retreiving results from `expenseService`, which will return mocked values from `expenseRepository`, defined in `@BeforeEach` annotated method. 
+To be sure that getAllExpensesMethod() is working correctly, we can do few different assertions. Basic one should check if retreived list of expenses has actually any elements: 
+
+    assertTrue(allExpenses.get().size() > 0);
+
+# 2.Integration services tests with @SpringJUnit4ClassRunner
+
