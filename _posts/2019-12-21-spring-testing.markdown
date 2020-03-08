@@ -86,3 +86,73 @@ To be sure that getAllExpensesMethod() is working correctly, we can do few diffe
 
 # 2.Integration services tests with @SpringJUnit4ClassRunner
 
+With these kind of tests, we **are not** using Mocks - instead of that, we are running tests with loaded application context, and using real services and repositories injections.
+Lets look on example:
+
+
+    @RunWith(SpringJUnit4ClassRunner.class)
+    //Integration tests ( Application context is used instead of mocks for repository )
+    @ContextConfiguration(classes = { WebSecurityConfig.class })
+    @Transactional
+    public class ExpensesServiceIntegrationImplTest {
+    
+    	@Autowired
+    	private ExpensesService expenseService;
+    	
+    	private TestUtils testUtils;
+    
+    	@Before
+    	public void setUp() {
+    		testUtils = new TestUtils();
+    	}
+    	@Test
+    	public void testGetExpenses() {
+    		List<Expense> allExpenses = expenseService.getAllExpenses().get();
+    		if (allExpenses.size() == 0) {
+    			try {
+    				expenseService.createExpense(getTestExpenseObj());
+    			} catch (Exception e) {
+    				e.printStackTrace();
+    			}
+    			assertTrue(expenseService.getAllExpenses().get().size() > 0);
+    		} else {
+    			assertTrue(allExpenses.size() > 0);
+    		}
+    
+    	}
+
+Annotations:
+
+     @RunWith(SpringJUnit4ClassRunner.class) 
+     @ContextConfiguration(classes = { WebSecurityConfig.class })
+are crucial for this kind of integration tests  because they allows us to use  automatically wired dependencies which are part of testes service.
+In this case: 
+
+    @Autowired private ExpensesService expenseService;
+
+expenseService could be used with all the dependencies inside without need of mocking them. 
+So its possible to invoke expenseService directly like in this 
+
+    List<Expense> allExpenses = expenseService.getAllExpenses().get();
+
+Writing an integration test with possibilities like this, makes it very intuitive. Whole test case could like like: 
+
+    @Test
+    	public void testGetExpenses() {
+    	List<Expense> allExpenses=expenseService.getAllExpenses().get();
+    		if (allExpenses.size() == 0) {
+    			try {
+    				expenseService.createExpense(getTestExpenseObj());
+    			} catch (Exception e) {
+    				e.printStackTrace();
+    			}
+    		assertTrue(expenseService.getAllExpenses().get().size() > 0);
+    		} else {
+    			assertTrue(allExpenses.size() > 0);
+    		}
+    }
+We first  checking if expensesService.getAllExpenses() will return any actual result-  if not, we create expense by ourself:
+
+    expenseService.createExpense(getTestExpenseObj())
+
+Whole assertion is just checking if returned list by `getAllExpenses` has any elements.
