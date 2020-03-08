@@ -1,3 +1,4 @@
+
 ---
 layout: post
 title:  "Three types of JUnit tests in Spring Boot"
@@ -158,4 +159,51 @@ We first  checking if expensesService.getAllExpenses() will return any actual re
 
 Whole assertion is just checking if list returned by `getAllExpenses()`  method has any elements.
 
+
+# 2.E2E controllers tests with @RunWith(SpringRunner.class)
+
+Similar to services integration tests, we are not using mocks here.
+Combination of these annotations :
+
+    @RunWith(SpringRunner.class)
+    @SpringBootTest(webEnvironment =SpringBootTest.WebEnvironment.RANDOM_PORT)
+	
+allows us to load Spring application context and inject @Autowired instances of services into our test (it's actually does more than that according to *Spring Reference Manual*), and sets a server port on random number, triggering listening on this port.
+Thanks to that, in our test we can make a requests to tested controller endpoints.
+
+Lets take a look on this fragment of code:
+
+    @RunWith(SpringRunner.class)
+    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+    public class BudgetControllerTestWithSpringRunner {
+    
+    	@LocalServerPort
+    	private int port;
+    	private TestRestTemplate restTemplate = new TestRestTemplate();
+    	private HttpHeaders headers = new HttpHeaders();
+    
+    	@Test
+    	public void testAddExpense() throws Exception {
+    		TestUtils testUtils = new TestUtils();
+    		Expense testExpenseToAdd = testUtils.generateTestExpense(20, null);
+    		HttpEntity<Expense> entity = new HttpEntity<Expense>(testExpenseToAdd, headers);
+    		ResponseEntity<ExpensesList> response = restTemplate.exchange(createURLWithPort("/expense"), HttpMethod.POST,
+    				entity, ExpensesList.class);
+    
+    		assertTrue(response.getStatusCode().equals(HttpStatus.OK));
+    		assertTrue(response.getBody().getExpenses().size() > 0);
+    	}
+
+
+In this fragment:
+
+    @LocalServerPort
+    private int port;
+    private TestRestTemplate restTemplate = new TestRestTemplate();
+    private HttpHeaders headers = new HttpHeaders();
+   
+   we are declaring:
+   - port which will be used for the invoked server
+   - TestRestTemplate object for executing requests to proper endpoints
+   - HttpHeaders which will be used for these requests
 
