@@ -1,9 +1,9 @@
-
 ---
 layout: post
 title:  "Three types of JUnit tests in Spring Boot"
 date:   2019-12-21 16:00:00 +0700
-categories: [java, spring, junit]
+categories:   [java,spring,junit]
+
 ---
 You are able to test your Spring web applications in few different ways with JUnit only. You can perform for example:
 
@@ -125,6 +125,7 @@ Annotations:
 
      @RunWith(SpringJUnit4ClassRunner.class) 
      @ContextConfiguration(classes = { WebSecurityConfig.class })
+     
 are crucial for this kind of integration tests  because they allows us to use  automatically wired dependencies which are part of testes service.
 In this case: 
 
@@ -155,4 +156,6 @@ We first  checking if expensesService.getAllExpenses() will return any actual re
 
     expenseService.createExpense(getTestExpenseObj())
 
-Whole assertion is just checking if returned list by `getAllExpenses` has any elements.
+Whole assertion is just checking if list returned by `getAllExpenses()`  method has any elements.
+
+
