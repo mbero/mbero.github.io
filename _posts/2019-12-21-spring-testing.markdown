@@ -207,3 +207,34 @@ In this fragment:
    - TestRestTemplate object for executing requests to proper endpoints
    - HttpHeaders which will be used for these requests
 
+Inside test itself:
+
+		@Test
+    	public void testAddExpense() throws Exception {
+    		TestUtils testUtils = new TestUtils();
+    		Expense testExpenseToAdd = testUtils.generateTestExpense(20, null);
+    		HttpEntity<Expense> entity = new HttpEntity<Expense>(testExpenseToAdd, headers);
+    		ResponseEntity<ExpensesList> response = 
+			restTemplate.exchange(createURLWithPort("/expense"), HttpMethod.POST,
+    				entity, ExpensesList.class);
+    
+    		assertTrue(response.getStatusCode().equals(HttpStatus.OK));
+    		assertTrue(response.getBody().getExpenses().size() > 0);
+    	}
+
+1.We are creating HttpEntity using previously generated test object and headers:
+			
+			HttpEntity<Expense> entity = new HttpEntity<Expense>(testExpenseToAdd, headers);
+    		
+2.We are executing request itself, with created HttpEntity, HttpMethod and returned java object class (endpoint JSON response will be automatically parsed into proper Java object);
+
+
+			ResponseEntity<ExpensesList> response = 
+			restTemplate.exchange
+			(createURLWithPort("/expense"), HttpMethod.POST,entity, ExpensesList.class);
+
+3.We are making assertions, to first check Http response status code and returned collections itself
+
+			assertTrue(response.getStatusCode().equals(HttpStatus.OK));
+    		assertTrue(response.getBody().getExpenses().size() > 0);
+			
