@@ -1,2 +1,2 @@
 # mbsolutions-online-notes
-Online-blog which will contain technical notes from. Design + engine
+Online-blog which is created by mb2e (markdown-based-blog-engine))
