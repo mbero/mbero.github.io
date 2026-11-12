@@ -15,8 +15,11 @@
     pager: document.getElementById('note-pager'),
     sidebar: document.getElementById('sidebar'),
     scrim: document.querySelector('.scrim'),
-    menuBtn: document.querySelector('.topbar__menu')
+    menuBtn: document.querySelector('.topbar__menu'),
+    filter: document.getElementById('tree-filter')
   };
+
+  var filterText = '';
 
   /* ---------- Pomocnicze ---------- */
 
@@ -102,13 +105,32 @@
     return order;
   }
 
+  /* ---------- Filtr ---------- */
+
+  function matches(text) {
+    return String(text).toLowerCase().indexOf(filterText) !== -1;
+  }
+
+  /* Zwraca true, gdy gałąź zawiera notatkę pasującą do filtra */
+  function branchMatches(node) {
+    if (node.note) {
+      var note = NOTES[node.note];
+      return !!note && (matches(note.title) || matches(node.note));
+    }
+    if (matches(node.name)) return true;
+    return (node.children || []).some(branchMatches);
+  }
+
   /* ---------- Drzewo ---------- */
 
   function renderTree(activeId) {
-    function build(nodes, parentPath) {
+    /* forced = folder pasuje nazwą, więc pokazujemy całą jego zawartość */
+    function build(nodes, parentPath, forced) {
       var ul = el('ul', parentPath ? { role: 'group' } : null);
 
       nodes.forEach(function (node) {
+        if (filterText && !forced && !branchMatches(node)) return;
+
         if (node.note) {
           var note = NOTES[node.note];
           if (!note) return;
@@ -126,7 +148,8 @@
         }
 
         var path = parentPath ? parentPath + '/' + node.name : node.name;
-        var isOpen = expanded.has(path);
+        var isOpen = filterText ? true : expanded.has(path);
+        var showAll = forced || (filterText ? matches(node.name) : false);
 
         var chevron = el('span', { className: 'tree__chevron', 'aria-hidden': 'true' }, [svg(CHEVRON)]);
         var button = el('button', {
@@ -147,7 +170,7 @@
 
         if (isOpen) {
           if (node.children && node.children.length) {
-            li.appendChild(build(node.children, path));
+            li.appendChild(build(node.children, path, showAll));
           } else {
             var empty = el('ul', { role: 'group' }, [
               el('li', { className: 'tree__empty', text: 'Brak notatek' })
@@ -162,8 +185,12 @@
       return ul;
     }
 
-    var built = build(DATA.TREE, '');
+    var built = build(DATA.TREE, '', false);
     els.tree.replaceChildren.apply(els.tree, Array.from(built.childNodes));
+
+    if (filterText && !els.tree.childNodes.length) {
+      els.tree.appendChild(el('li', { className: 'tree__empty', text: 'Brak wyników' }));
+    }
   }
 
   /* ---------- Artykuł ---------- */
@@ -298,6 +325,11 @@
 
     if (!isInitial) window.scrollTo(0, 0);
   }
+
+  els.filter.addEventListener('input', function () {
+    filterText = els.filter.value.trim().toLowerCase();
+    renderTree(currentNoteId());
+  });
 
   window.addEventListener('hashchange', function () { route(false); });
   route(true);

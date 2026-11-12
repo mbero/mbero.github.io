@@ -459,3 +459,190 @@ a:hover { color: var(--color-fg); }
   .sidebar,
   .tree__chevron svg { transition: none; }
 }
+
+
+/* ==========================================================
+   Dodatki silnika mbs_kh_engine
+   Elementy, których nie było w statycznym szablonie:
+   filtr drzewa, pełny zakres Markdownu, komunikaty stanu.
+   ========================================================== */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Filtr notatek ---------- */
+
+.sidebar__filter {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.filter__input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 5px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.filter__input::placeholder { color: #8a8a8a; }
+.filter__input:focus {
+  border-color: var(--color-fg);
+  outline: none;
+}
+
+/* ---------- Komunikaty stanu ---------- */
+
+.prose .notice {
+  padding: 14px 16px;
+  border-left: 3px solid var(--color-guide);
+  background: var(--color-panel);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.missing-link {
+  color: var(--color-muted);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+/* ---------- Nagłówki poza h2 ---------- */
+
+.prose h1,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  margin: 36px 0 8px;
+  font-family: var(--font-mono);
+  line-height: 1.35;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+.prose h1 { margin-top: 44px; font-size: 22px; text-transform: uppercase; }
+.prose h3 { font-size: 17px; }
+.prose h4 { font-size: 15px; }
+.prose h5,
+.prose h6 { font-size: 14px; color: var(--color-muted); }
+
+/* ---------- Listy numerowane i zagnieżdżone ---------- */
+
+.prose ol {
+  margin: 16px 0;
+  padding-left: 24px;
+}
+.prose ol li::marker { font-family: var(--font-mono); font-size: 0.9em; }
+.prose ul ul,
+.prose ul ol,
+.prose ol ul,
+.prose ol ol {
+  margin: 6px 0;
+}
+.prose ul ul { list-style: circle; }
+
+/* ---------- Kod w linii ---------- */
+
+.prose code {
+  padding: 1px 5px;
+  border: 1px solid var(--color-line);
+  border-radius: 3px;
+  background: var(--color-panel);
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  color: var(--color-text);
+}
+.prose pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ---------- Cytat ---------- */
+
+.prose blockquote {
+  margin: 24px 0;
+  padding: 4px 0 4px 20px;
+  border-left: 3px solid var(--color-fg);
+  color: var(--color-lead);
+}
+.prose blockquote > :first-child { margin-top: 0; }
+.prose blockquote > :last-child { margin-bottom: 0; }
+
+/* ---------- Tabela ---------- */
+
+.prose .table-wrap {
+  margin: 24px 0;
+  overflow-x: auto;
+  border: 1px solid var(--color-line);
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.prose th,
+.prose td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-line);
+  text-align: left;
+  vertical-align: top;
+}
+.prose th {
+  background: var(--color-panel);
+  border-bottom: 2px solid var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.prose tbody tr:last-child td { border-bottom: 0; }
+
+/* ---------- Pozostałe ---------- */
+
+.prose hr {
+  margin: 40px 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.prose img {
+  display: block;
+  margin: 24px 0;
+  border: 1px solid var(--color-line);
+}
+
+.prose a {
+  text-underline-offset: 3px;
+}
+
+.article__lead code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+@media (max-width: 900px) {
+  .prose table { font-size: 14px; }
+  .prose th,
+  .prose td { padding: 8px 10px; }
+}
