@@ -2,12 +2,11 @@
   'use strict';
 
   var DATA = window.BLOG_DATA;
-  var NOTES = DATA.notes;
+  var NOTES = DATA.NOTES;
   var STORAGE_KEY = 'mbs.tree.expanded';
 
   var els = {
     tree: document.getElementById('tree'),
-    filter: document.getElementById('tree-filter'),
     category: document.getElementById('note-category'),
     title: document.getElementById('note-title'),
     lead: document.getElementById('note-lead'),
@@ -15,12 +14,9 @@
     body: document.getElementById('note-body'),
     pager: document.getElementById('note-pager'),
     sidebar: document.getElementById('sidebar'),
-    about: document.getElementById('about-link'),
     scrim: document.querySelector('.scrim'),
     menuBtn: document.querySelector('.topbar__menu')
   };
-
-  var filterText = '';
 
   /* ---------- Pomocnicze ---------- */
 
@@ -41,18 +37,14 @@
 
   function svg(markup) {
     var wrap = document.createElement('span');
-    wrap.innerHTML = markup; /* stała, zaufana treść ikony */
+    wrap.innerHTML = markup; // stała, zaufana treść ikony
     return wrap.firstChild;
   }
 
   var CHEVRON = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
 
-  function encodePath(id) {
-    return id.split('/').map(encodeURIComponent).join('/');
-  }
-
   function noteHref(id) {
-    return '#/' + encodePath(id);
+    return '#/' + id.split('/').map(encodeURIComponent).join('/');
   }
 
   function currentNoteId() {
@@ -68,54 +60,55 @@
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return new Set(JSON.parse(raw));
-    } catch (error) { /* brak dostępu do storage — użyj domyślnych */ }
-    return new Set();
+    } catch (e) { /* brak dostępu do storage – użyj domyślnych */ }
+    return new Set(['AWS', 'Databases']);
   }
 
   function saveExpanded() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(expanded)));
-    } catch (error) { /* ignoruj */ }
+    } catch (e) { /* ignoruj */ }
   }
 
   var expanded = loadExpanded();
 
-  /* Foldery prowadzące do notatki — trzeba je otworzyć, żeby ją pokazać */
-  function ancestorsOf(id) {
-    var parts = id.split('/');
-    var paths = [];
-    for (var i = 0; i < parts.length - 1; i++) {
-      paths.push(parts.slice(0, i + 1).join('/'));
+  /* Ścieżki folderów prowadzące do notatki (żeby ją odsłonić w drzewie) */
+  function ancestorsOf(noteId) {
+    var result = null;
+    function walk(nodes, parents) {
+      nodes.forEach(function (node) {
+        if (result) return;
+        if (node.note === noteId) { result = parents; return; }
+        if (node.children) {
+          var path = parents.length ? parents[parents.length - 1] + '/' + node.name : node.name;
+          walk(node.children, parents.concat(path));
+        }
+      });
     }
-    return paths;
+    walk(DATA.TREE, []);
+    return result || [];
   }
 
-  /* ---------- Filtr ---------- */
-
-  function matches(text) {
-    return text.toLowerCase().indexOf(filterText) !== -1;
-  }
-
-  /* Zwraca true, gdy gałąź zawiera notatkę pasującą do filtra */
-  function branchMatches(node) {
-    if (node.note) {
-      var note = NOTES[node.note];
-      return !!note && (matches(note.title) || matches(node.note));
+  /* Kolejność notatek (do „Poprzednia / Następna”) */
+  function noteOrder() {
+    var order = [];
+    function walk(nodes) {
+      nodes.forEach(function (node) {
+        if (node.note) order.push(node.note);
+        else if (node.children) walk(node.children);
+      });
     }
-    if (matches(node.name)) return true;
-    return node.children.some(branchMatches);
+    walk(DATA.TREE);
+    return order;
   }
 
   /* ---------- Drzewo ---------- */
 
   function renderTree(activeId) {
-    /* forced = rodzic pasuje nazwą, więc pokazujemy całą jego zawartość */
-    function build(nodes, isRoot, forced) {
-      var ul = el('ul', isRoot ? null : { role: 'group' });
+    function build(nodes, parentPath) {
+      var ul = el('ul', parentPath ? { role: 'group' } : null);
 
       nodes.forEach(function (node) {
-        if (filterText && !forced && !branchMatches(node)) return;
-
         if (node.note) {
           var note = NOTES[node.note];
           if (!note) return;
@@ -132,8 +125,8 @@
           return;
         }
 
-        var isOpen = filterText ? true : expanded.has(node.path);
-        var showAll = forced || (filterText ? matches(node.name) : false);
+        var path = parentPath ? parentPath + '/' + node.name : node.name;
+        var isOpen = expanded.has(path);
 
         var chevron = el('span', { className: 'tree__chevron', 'aria-hidden': 'true' }, [svg(CHEVRON)]);
         var button = el('button', {
@@ -144,8 +137,8 @@
         }, [chevron, el('span', { className: 'tree__label', text: node.name })]);
 
         button.addEventListener('click', function () {
-          if (expanded.has(node.path)) expanded.delete(node.path);
-          else expanded.add(node.path);
+          if (expanded.has(path)) expanded.delete(path);
+          else expanded.add(path);
           saveExpanded();
           renderTree(activeId);
         });
@@ -153,12 +146,13 @@
         var li = el('li', null, [button]);
 
         if (isOpen) {
-          if (node.children.length) {
-            li.appendChild(build(node.children, false, showAll));
+          if (node.children && node.children.length) {
+            li.appendChild(build(node.children, path));
           } else {
-            li.appendChild(el('ul', { role: 'group' }, [
+            var empty = el('ul', { role: 'group' }, [
               el('li', { className: 'tree__empty', text: 'Brak notatek' })
-            ]));
+            ]);
+            li.appendChild(empty);
           }
         }
 
@@ -168,21 +162,58 @@
       return ul;
     }
 
-    var built = build(DATA.tree, true, false);
+    var built = build(DATA.TREE, '');
     els.tree.replaceChildren.apply(els.tree, Array.from(built.childNodes));
+  }
 
-    if (filterText && !els.tree.childNodes.length) {
-      els.tree.appendChild(el('li', { className: 'tree__empty', text: 'Brak wyników' }));
+  /* ---------- Artykuł ---------- */
+
+  function countWords(note) {
+    var words = 0;
+    note.blocks.forEach(function (b) {
+      var html = b.html ? b.html.replace(/<[^>]*>/g, ' ') : '';
+      var text = (b.text || '') + ' ' + (b.items || []).join(' ') + ' ' + html;
+      words += text.split(/\s+/).filter(Boolean).length;
+    });
+    return words;
+  }
+
+  function renderBlock(block) {
+    switch (block.type) {
+      case 'p':
+        return el('p', { text: block.text });
+      case 'h2':
+        return el('h2', { text: block.text });
+      case 'ul':
+        return el('ul', null, block.items.map(function (item) {
+          return el('li', { text: item });
+        }));
+      case 'code':
+        return el('pre', null, [el('code', { text: block.text })]);
+      case 'link': {
+        var target = NOTES[block.note];
+        if (!target) return null;
+        var p = el('p', { className: 'related' });
+        p.appendChild(document.createTextNode('Powiązane: '));
+        p.appendChild(el('a', { href: noteHref(block.note), text: target.title }));
+        return p;
+      }
+      case 'html': {
+        // Note rendered from Markdown by mb2e at build time: trusted, generated content.
+        var div = el('div', { className: 'note-html' });
+        div.innerHTML = block.html;
+        return div;
+      }
+      default:
+        return null;
     }
   }
 
-  /* ---------- Treść notatki ---------- */
-
   function renderPager(id) {
-    var order = DATA.order;
-    var index = order.indexOf(id);
-    var prev = index > 0 ? order[index - 1] : null;
-    var next = index >= 0 && index < order.length - 1 ? order[index + 1] : null;
+    var order = noteOrder();
+    var idx = order.indexOf(id);
+    var prev = idx > 0 ? order[idx - 1] : null;
+    var next = idx >= 0 && idx < order.length - 1 ? order[idx + 1] : null;
 
     var items = [];
     if (prev) {
@@ -200,41 +231,33 @@
     els.pager.replaceChildren.apply(els.pager, items);
   }
 
-  function renderMeta(note) {
-    var meta = [];
-    if (note.date) meta.push(el('time', { datetime: note.date, text: note.date }));
-    meta.push(el('span', { text: note.minutes + ' min czytania' }));
-    if (note.tags.length) {
-      meta.push(el('span', { className: 'article__tags' }, note.tags.map(function (tag) {
-        return el('span', { className: 'article__tag', text: '#' + tag });
-      })));
-    }
-    els.meta.replaceChildren.apply(els.meta, meta);
-  }
-
-  function showMessage(text) {
-    els.lead.hidden = true;
-    els.body.replaceChildren(el('p', { className: 'notice', text: text }));
-  }
-
   function renderArticle(id) {
     var note = NOTES[id];
+    var first = note.blocks[0];
+    var hasLead = first && first.type === 'p';
 
     els.category.textContent = note.category;
     els.title.textContent = note.title;
-    renderMeta(note);
+    els.lead.textContent = hasLead ? first.text : '';
+    els.lead.hidden = !hasLead;
+
+    var meta = [];
+    if (note.date) meta.push(el('time', { datetime: note.date, text: note.date }));
+    meta.push(el('span', { text: Math.max(1, Math.ceil(countWords(note) / 200)) + ' min czytania' }));
+    if (note.tags && note.tags.length) {
+      meta.push(el('span', { className: 'article__tags' }, note.tags.map(function (t) {
+        return el('span', { className: 'article__tag', text: '#' + t });
+      })));
+    }
+    els.meta.replaceChildren.apply(els.meta, meta);
+
+    var blocks = (hasLead ? note.blocks.slice(1) : note.blocks)
+      .map(renderBlock)
+      .filter(Boolean);
+    els.body.replaceChildren.apply(els.body, blocks);
+
     renderPager(id);
     document.title = note.title + ' — MBS. Knowledge Hub Blog';
-
-    /* Treść jest już w pamięci — HTML powstał w build.js z własnego Markdownu */
-    if (!note.lead && !note.html) {
-      showMessage('Notatka jest pusta.');
-      return;
-    }
-
-    els.lead.innerHTML = note.lead;
-    els.lead.hidden = !note.lead;
-    els.body.innerHTML = note.html;
   }
 
   /* ---------- Panel mobilny ---------- */
@@ -250,16 +273,11 @@
     setDrawer(!els.sidebar.classList.contains('is-open'));
   });
   els.scrim.addEventListener('click', function () { setDrawer(false); });
-  els.sidebar.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape' && els.sidebar.classList.contains('is-open')) {
+  els.sidebar.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && els.sidebar.classList.contains('is-open')) {
       setDrawer(false);
       els.menuBtn.focus();
     }
-  });
-
-  els.filter.addEventListener('input', function () {
-    filterText = els.filter.value.trim().toLowerCase();
-    renderTree(currentNoteId());
   });
 
   /* ---------- Routing ---------- */
@@ -267,33 +285,18 @@
   function route(isInitial) {
     var id = currentNoteId();
 
-    if (!NOTES[id]) {
-      renderTree('');
-      els.category.textContent = '';
-      els.title.textContent = 'Brak notatek';
-      els.meta.replaceChildren();
-      els.pager.replaceChildren();
-      showMessage('Katalog datasource jest pusty. Dodaj pliki .md i uruchom node build.js.');
-      return;
-    }
-
-    ancestorsOf(id).forEach(function (folder) { expanded.add(folder); });
+    ancestorsOf(id).forEach(function (path) { expanded.add(path); });
     saveExpanded();
 
     renderTree(id);
     renderArticle(id);
     setDrawer(false);
 
-    if (DATA.about && id === DATA.about) els.about.setAttribute('aria-current', 'page');
-    else els.about.removeAttribute('aria-current');
+    var about = document.getElementById('about-link');
+    if (id === 'about') about.setAttribute('aria-current', 'page');
+    else about.removeAttribute('aria-current');
 
     if (!isInitial) window.scrollTo(0, 0);
-  }
-
-  if (DATA.about) {
-    els.about.href = noteHref(DATA.about);
-  } else {
-    els.about.hidden = true;
   }
 
   window.addEventListener('hashchange', function () { route(false); });
